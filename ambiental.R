@@ -1,8 +1,14 @@
-#FJ 2025
+# 
+# Description:
+#
+# Script to import environmental data form nc files and extract the specific values for each variable to each sampling coordinates
+#
 
-rm(list=ls()) # borra el ambiente
-graphics.off() # Limpiar la lista de graficos
+# Clean Rstudio environment
+rm(list=ls()) 
+graphics.off() 
 
+#Import libraries
 library(raster)
 library(ggplot2)
 library(ggrepel)
@@ -38,7 +44,6 @@ rasStack = stack(temp,salinity,no3,po4,si,sithick,siconc,o2,ph,dfe,chl,rad,cloud
 pointCoordinates=read.csv("pointfile.txt",sep = ",", dec= ".")
 
 #check coordinates mapping them
-
 world <- rworldmap::getMap(resolution = "high")
 uru <- as(extent(-77, -51, -58, -33), "SpatialPolygons")
 proj4string(uru) <- CRS(proj4string(world))
