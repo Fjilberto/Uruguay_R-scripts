@@ -1,8 +1,14 @@
-#### Fjilberto
+# 
+# Description:
+#
+# Script to clean genotypes by SNPs and individuals, obtein different genetic stadistics (FIS, FST, Ho and He values) and to perform the DAPC analysis using the library Adegenet 
+#
 
-rm(list=ls()) # borra el ambiente
-graphics.off() # Limpiar la lista de graficos
+# Clean Rstudio environment
+rm(list=ls()) 
+graphics.off() 
 
+# Import libraries
 library(tidyverse)
 library(adegenet)
 library(poppr)
@@ -15,15 +21,14 @@ setwd("/media/oxus/LS/Trabajo/Paper/uruguay/adegenet")
 datos_ori<-read.genepop("uruguay.gen",ncode = 3,quiet=FALSE)
 datos_ori<-read.genepop("uruprocesado80v2.gen",ncode = 3,quiet = FALSE)
 
-# Identificar SNP eliminados al importar
+# Identify SNPs removed during import
 
 nLoc(datos_ori)
-snp<-read.table(file="clipboard",sep = "\t",header = F) #lista de SNP de interes leer desde genepop
-setdiff(snp$V1,locNames(datos_ori)) #SNP Eliminados
+snp<-read.table(file="clipboard",sep = "\t",header = F) #Original SNPs list from genind file
+setdiff(snp$V1,locNames(datos_ori)) #SNP not imported
 setdiff(locNames(dato_ori),snp$V1)
 
-#Editar nombres poblaciones
-
+# Edit population names
 unique(datos_ori$pop)
 popNames(datos_ori)<-c("PBUY","LPUY","PEUY","PRUY","BSAR","BBAR","MPAR","FKUK","BACL","PMAR",
                        "CTCL","RMCL","PCCL","IPCL",
@@ -32,16 +37,16 @@ popNames(datos_ori)<-c("PBUY","LPUY","PEUY","PRUY","BSAR","BBAR","MPAR","FKUK","
                        "Mch","Mp","Mg_Med","Mg_Atl","Me_AM","Me_EU","Mpl","Mt")
 unique(datos_ori$pop)
 
-#### todo el dataset
+#### Save a copy of the original dataset without modification
 
 datos = datos_ori
 
-#### numeritos
+#### Basic Stadistics (N° per population, N° alelles, etc etc)
 
 summary(datos_ori$pop)
 summary(datos_ori)
 
-#### numeritos con hierfstat
+#### Basic Stadistics with Hierfstat
 
 hierfstat_data <- genind2hierfstat(datos)
 
@@ -53,40 +58,29 @@ n_individuos_por_poblacion <- as.data.frame(table(pop(datos_study))) %>%
 
 stats_result <- basic.stats(hierfstat_data_study)
 
-# Heterocigosidad Observada (Ho) promediada por población
-# `colMeans` calcula el promedio de CADA COLUMNA (que es una población) sobre todas las FILAS (loci)
+#Obtein Ho, He and FIS values per population
 ho_promedio_poblacion <- colMeans(stats_result$Ho, na.rm = TRUE)
-
-# Heterocigosidad Esperada (Hs) promediada por población
 hs_promedio_poblacion <- colMeans(stats_result$Hs, na.rm = TRUE)
-
-# Coeficiente de Endogamia (Fis) promediado por población
 fis_promedio_poblacion <- colMeans(stats_result$Fis, na.rm = TRUE)
 
-# Crear la tabla resumen ---
+# Generate table with the previously obtained values
 tabla_resumen_poblacion <- tibble(
-  Poblacion = names(ho_promedio_poblacion), # Los nombres de las poblaciones vienen de los resultados de colMeans
+  Poblacion = names(ho_promedio_poblacion),
   Ho = ho_promedio_poblacion,
   Hs = hs_promedio_poblacion,
   Fis = fis_promedio_poblacion,
 )
 
-# Unir el número de individuos (n) a la tabla resumen ---
+# Add the n per population 
 tabla_resumen_poblacion_final <- tabla_resumen_poblacion %>%
   left_join(n_individuos_por_poblacion, by = "Poblacion") %>%
-  # Opcional: Reordenar las columnas para que 'n' esté al principio
   select(Poblacion, n, everything())
 
-cat("--- Tabla Resumen de Estadísticas Genéticas Promedio por Población (con n) ---\n")
-print(tabla_resumen_poblacion_final)
-
-cat("\n--- Estadísticas de Diferenciación Genética Globales (Promediadas sobre todos los loci) ---\n")
-print(stats_result$overall)
-
+# Made a results table
 write.table(tabla_resumen_poblacion_final,file = "tabla_resumen_poblacion_final_study.txt", sep = ",", dec = ".",row.names = F)
 write.table(stats_result$overall,file = "stats_result_study.txt", sep = ",", dec = ".",row.names = F)
 
-# Eliminar SNPs e individuos bajo el 80%
+# Exclude SNPs and samples with a genotyping rate below 80%
 
 ## by loci
 
@@ -108,7 +102,7 @@ indmiss_datos[ which(indmiss_datos < 0.80) ] # print individuals with < 70% comp
 mean(indmiss_datos[ which(indmiss_datos < 0.80) ])
 datos80 = missingno(datos, type = "geno", cutoff = 0.20)
 
-### Monomorphic SNPs
+### Identify monomorphic SNPs
 isPoly(datos) %>% summary
 
 datos_study = popsub(datos, sublist = c("PBUY","LPUY","PEUY","PRUY","BSAR","BBAR","MPAR","FKUK","BACL","PMAR","CTCL",
@@ -116,7 +110,7 @@ datos_study = popsub(datos, sublist = c("PBUY","LPUY","PEUY","PRUY","BSAR","BBAR
                                         "PNCL","PWCL")) 
 isPoly(datos_study) %>% summary
 
-### excluir monomorficos
+### Exclude monomorphic SNPs
 
 poly_loci = names(which(isPoly(datos_study) == TRUE))
 datos_study = datos_study[loc = poly_loci]
@@ -125,7 +119,7 @@ isPoly(datos_study) %>% summary
 hierfstat_data_study <- genind2hierfstat(datos_study)
 basic.stats(hierfstat_data_study)
 
-# Generar genepop con datos procesados
+# Create a genepop file with the processed genetic data
 
 devtools::source_url("https://raw.githubusercontent.com/Tom-Jenkins/utility_scripts/master/TJ_genind2genepop_function.R")
 genind2genepop(datos80,file = "uruprocesado80v21.gen")
@@ -134,13 +128,12 @@ genind2genepop(datos80,file = "uruprocesado80v21.gen")
 summary(datos80$pop)
 as.data.frame(table(datos80$pop))
 
-##### FST
+##### Obtein FST matrix and create a graph of this
 datos80=datos
 datos_fst = genet.dist(datos80, method = "WC84") %>% round(digits = 4)
 write.table(as.matrix(datos_fst),file = "fst.txt", sep = ",", dec = ".",row.names = F)
 
-# plot FST
-
+# plot FST values
 lab_order = c(unique(datos80$pop)) # Ordenar poblaciones
 
 # Change order of rows and cols
@@ -182,43 +175,27 @@ ggplot(data = fst.df, aes(x = Site1, y = Site2, fill = Fst)) +
 
 ggsave("fst.tiff",width = 18,height = 8,dpi = "print")
 
-####### Hacer subgrupos
+####### Prepare different groups to analyze
 
 datos80 = datos_ori
 
-#### Solo referencias
+#### Only references
 
 datos = popsub(datos80, sublist = c("Mch","Mp","Mg_Med","Mg_Atl","Me_AM","Me_EU","Mpl","Mt"))
 
-#### Solo en estudio
+#### Only studied locations
 
 datos = popsub(datos80, exclude = c("Mch","Mp","Mg_Med","Mg_Atl","Me_AM","Me_EU","Mpl","Mt"))
 
-#### Dos referencias mch, mg y mp
+#### mch and mp references + studied locations
 
 datos = popsub(datos80, exclude = c("Mg_Med","Mg_Atl","Me_AM","Me_EU","Mpl","Mt"))
 
-#### Tres referencias mch, mg y mp
+#### mch, mg y mp + studied locations
 
 datos = popsub(datos80, exclude = c("Mg_Atl","Me_AM","Me_EU","Mpl","Mt"))
 
-#### Cinco referencias mch, me, mg, mp, mpl
-
-datos = popsub(datos80, exclude = c("Mg_Atl","Me_EU","Mt"))
-
-#### Cinco referencias mch, me, mg, mp, mpl
-
-datos = popsub(datos80, exclude = c("Mt"))
-
-#### Seis referencias mch, me, mg, mp, mpl y mt
-
-datos = popsub(datos80, exclude = c("Mg_Atl","Me_AM"))
-
-#### Seis referencias all
-
-datos = datos80
-
-###### DAPC
+###### DAPC analysis
 
 set.seed(123)
 x = tab(datos, NA.method = "mean")
@@ -256,23 +233,23 @@ centroid = aggregate(cbind(Axis1, Axis2, Axis3) ~ Site, data = ind_coords, FUN =
 ind_coords = left_join(ind_coords[,-c(4,5)], centroid, by = "Site", suffix = c("",".cen")) # Add centroid coordinates to ind_coords dataframe
 ind_coords = left_join(ind_coords, centroid, by = "Site", suffix = c("",".cen")) # Add centroid coordinates to ind_coords dataframe
 
-# Color para cada grupo
+# Colors by different groups
 
-# Solo referencias
+# Only references
 
 cols = c("indianred1","plum","goldenrod1","goldenrod3","dodgerblue","dodgerblue4",
          "darkolivegreen4","grey60")
 
 cols = c("indianred1","plum","goldenrod1","dodgerblue","darkolivegreen4","grey60")
 
-# Solo en estudio
+# Only studied locations
 
 cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#208A8E","#306478"))(6),
          colorRampPalette(c("#EC7B74","#BF635A"))(4),
          colorRampPalette(c("#5E8B48","#DAC753"))(10))
 
-# Con 3 referencias
+# 3 references + studied locations
 
 cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#208A8E","#306478"))(6),
@@ -280,7 +257,7 @@ cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#5E8B48","#DAC753"))(10),
          "indianred1","plum","goldenrod1")
 
-# Con 5 referencias
+# 5 references + studied locations
 
 cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#208A8E","#306478"))(6),
@@ -288,29 +265,13 @@ cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#5E8B48","#DAC753"))(10),
          "indianred1","plum","goldenrod1","dodgerblue","darkolivegreen4")
 
-# Con 5 referencias all
-
-cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
-         colorRampPalette(c("#208A8E","#306478"))(6),
-         colorRampPalette(c("#EC7B74","#BF635A"))(4),
-         colorRampPalette(c("#5E8B48","#DAC753"))(10),
-         "indianred1","plum","goldenrod1","goldenrod2","dodgerblue","dodgerblue1","darkolivegreen4")
-
-# Con 6 referencias
+# 6 references + studied locations
 
 cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
          colorRampPalette(c("#208A8E","#306478"))(6),
          colorRampPalette(c("#EC7B74","#BF635A"))(4),
          colorRampPalette(c("#5E8B48","#DAC753"))(10),
          "indianred1","plum","goldenrod1","dodgerblue","darkolivegreen4","grey60")
-
-# Con 6 referencias all
-
-cols = c(colorRampPalette(c("#38F4E5","#64D5F7"))(4),
-         colorRampPalette(c("#208A8E","#306478"))(6),
-         colorRampPalette(c("#EC7B74","#BF635A"))(4),
-         colorRampPalette(c("#5E8B48","#DAC753"))(10),
-         "indianred1","plum","goldenrod1","goldenrod2","dodgerblue","dodgerblue1","darkolivegreen4","grey60")
 
 # Custom x and y labels
 xlab = paste("Axis 1 (", format(round(percent[1], 1), nsmall=1)," %)", sep="")
@@ -432,10 +393,11 @@ ggplot(data = ind_coords, aes(x = Axis1, y = Axis2))+
         plot.title = element_text(hjust=0.5, size=15)
   )
 
-# Grabar grafico
+# Save DAPC plot
 
 ggsave("onlystudyv3_dot.tiff",width = 18,height = 8,dpi = "print")
 
 # Obtener las probabilidades a posteriori
+
 
 write.table(round(dapc1$posterior,digits = 4), file = "pos_3ref.txt",sep = "\t")
