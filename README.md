@@ -6,4 +6,4 @@ ambiental.R: It was used to import environmental data from .nc files and extract
 
 genoamb.R: Genetic and Environmental analysis using VEGAN and Assignpop libraries.
 
-urunalisis.R: It was first used to filter the genotype matrix according to its genotyping rate and perform the DAPC analysis with the Adegenet library; as well as the respective graphs associated with this analysis.
+urunalisis.R: It was used to filter the genotypes according to its genotyping rate, obtain genetic statistics such FIS, FST, Ho, He values and to perform the DAPC analysis with the Adegenet library.
