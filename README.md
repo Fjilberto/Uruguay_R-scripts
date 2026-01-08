@@ -4,6 +4,6 @@ The following script in R where used to perform the following analysis or to plo
 
 ambiental.R: It was used to import environmental data from .nc files and extract specific data for the coordinates of each sampling location.
 
-genoamb.R: Genetic and Environmental analysis using VEGAN and Assignpop libraries.
+genoamb.R: PCA results. Genetic and Environmental analysis using VEGAN and Assignpop libraries.
 
 urunalisis.R: It was used to filter the genotypes according to its genotyping rate, obtain genetic statistics such FIS, FST, Ho, He values and to perform the DAPC analysis with the Adegenet library.
